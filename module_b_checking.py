@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict
 from datetime import datetime
 
-app = FastAPI(title="Сервис проверки ответов")
+app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,30 +13,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Правильные ответы для 10 вопросов
 correct_answers_db = {
     1: "Объектно-ориентированное программирование",
     2: "#",
     3: "tuple",
     4: "print()",
-    5: "Сравнение на равенство",
-    6: "while",
-    7: "Интерфейс программирования приложений",
-    8: "GET",
-    9: "Structured Query Language",
-    10: "80"
+    5: "80"
 }
-
 
 class AnswerItem(BaseModel):
     questionId: int
     selectedOption: str
 
-
 class SubmitRequest(BaseModel):
     userId: int
     answers: List[AnswerItem]
-
 
 @app.post("/tests/{test_id}/submit")
 async def submit_answers(test_id: int, request: SubmitRequest):
@@ -73,7 +64,6 @@ async def submit_answers(test_id: int, request: SubmitRequest):
         "details": details,
         "incorrectAnswers": incorrect_answers
     }
-
 
 if __name__ == "__main__":
     import uvicorn
