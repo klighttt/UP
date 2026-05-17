@@ -1,7 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict
+from datetime import datetime
 
 app = FastAPI(title="Сервис проверки ответов")
 
@@ -12,7 +13,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Правильные ответы для 10 вопросов (id -> правильный ответ)
+# Правильные ответы для 10 вопросов
 correct_answers_db = {
     1: "Объектно-ориентированное программирование",
     2: "#",
@@ -26,24 +27,16 @@ correct_answers_db = {
     10: "80"
 }
 
+
 class AnswerItem(BaseModel):
     questionId: int
     selectedOption: str
+
 
 class SubmitRequest(BaseModel):
     userId: int
     answers: List[AnswerItem]
 
-class SubmitResponse(BaseModel):
-    testId: int
-    userId: int
-    score: int
-    maxScore: int
-    percentage: float
-    passed: bool
-    completedAt: str
-    details: Dict[int, bool]
-    incorrectAnswers: Dict[int, Dict[str, str]]
 
 @app.post("/tests/{test_id}/submit")
 async def submit_answers(test_id: int, request: SubmitRequest):
@@ -51,12 +44,12 @@ async def submit_answers(test_id: int, request: SubmitRequest):
     correct_count = 0
     details = {}
     incorrect_answers = {}
-    
+
     for answer in request.answers:
         question_id = answer.questionId
         user_answer = answer.selectedOption
         correct_answer = correct_answers_db.get(question_id)
-        
+
         is_correct = (user_answer == correct_answer)
         if is_correct:
             correct_count += 1
@@ -66,10 +59,9 @@ async def submit_answers(test_id: int, request: SubmitRequest):
                 "correct_answer": correct_answer
             }
         details[question_id] = is_correct
-    
-    from datetime import datetime
+
     score = int((correct_count / total_questions) * 100) if total_questions > 0 else 0
-    
+
     return {
         "testId": test_id,
         "userId": request.userId,
@@ -81,6 +73,7 @@ async def submit_answers(test_id: int, request: SubmitRequest):
         "details": details,
         "incorrectAnswers": incorrect_answers
     }
+
 
 if __name__ == "__main__":
     import uvicorn

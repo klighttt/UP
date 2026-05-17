@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -21,7 +21,12 @@ questions = {
         {
             "id": 1,
             "text": "Что означает аббревиатура ООП?",
-            "options": ["Объектно-ориентированное программирование", "Оперативное объединение программ", "Основные основы программирования", "Общее описание процессов"],
+            "options": [
+                "Объектно-ориентированное программирование",
+                "Оперативное объединение программ",
+                "Основные основы программирования",
+                "Общее описание процессов"
+            ],
             "type": "single",
             "correctAnswer": "Объектно-ориентированное программирование"
         },
@@ -101,16 +106,18 @@ questions = {
     ]
 }
 
+
 @app.route('/tests/active', methods=['GET'])
 def get_active_test():
     first_test = list(tests.values())[0]
     return jsonify(first_test)
 
+
 @app.route('/tests/<int:test_id>/questions', methods=['GET'])
 def get_questions(test_id):
     if test_id not in questions:
         return jsonify({"error": "Тест не найден"}), 404
-    
+
     safe_questions = []
     for q in questions[test_id]:
         safe_questions.append({
@@ -120,6 +127,7 @@ def get_questions(test_id):
             "type": q["type"]
         })
     return jsonify(safe_questions)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
