@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # Модуль А — сервис тестов и вопросов (Flask)
+  module-a:
+    build:
+      context: .
+      dockerfile: Dockerfile.a
+    container_name: testing-module-a
+    ports:
+      - "5001:5001"
+    networks:
+      - testing-net
+
+  # Модуль Б — сервис проверки ответов (FastAPI)
+  module-b:
+    build:
+      context: .
+      dockerfile: Dockerfile.b
+    container_name: testing-module-b
+    ports:
+      - "5002:5002"
+    networks:
+      - testing-net
+
+  # Модуль В — сервис результатов (Node.js/Express)
+  module-c:
+    build:
+      context: ./result-service
+      dockerfile: Dockerfile.c
+    container_name: testing-module-c
+    ports:
+      - "3000:3000"
+    networks:
+      - testing-net
+
+networks:
+  testing-net:
+    driver: bridge
