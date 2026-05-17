@@ -28,11 +28,13 @@ questions = {
 def get_active_test():
     return jsonify(tests[1])
 
+
 @app.route('/tests/<int:test_id>/questions', methods=['GET'])
 def get_questions(test_id):
     if test_id not in questions:
         return jsonify({"error": "Тест не найден"}), 404
     return jsonify(questions[test_id])
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
