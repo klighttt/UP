@@ -19,7 +19,7 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: Установить зависимости
+    - name: Установить зависимости Python
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
@@ -31,19 +31,30 @@ jobs:
     - name: Запуск модульных тестов
       run: python test_modules.py
 
-    - name: Запуск всех трёх модулей и проверка их работы (интеграционный тест)
+    - name: Установить Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Установить зависимости для модуля В
       run: |
-        # Запускаем модуль А в фоне
+        cd result-service
+        npm install
+        cd ..
+
+    - name: Запуск всех трёх модулей и проверка их работы
+      run: |
+        # Запускаем модули в фоне
         python module_a_questions.py &
-        # Запускаем модуль Б в фоне
         python module_b_checking.py &
-        # Ждём 5 секунд, чтобы серверы поднялись
-        sleep 5
-        # Проверяем, что модуль А отвечает
-        curl --fail http://localhost:5001/tests/active || exit 1
-        # Проверяем, что модуль Б отвечает
-        curl --fail http://localhost:5002/docs || exit 1
-        # Останавливаем процессы (для чистоты)
-        pkill -f "python module_a_questions.py"
-        pkill -f "uvicorn"
+        cd result-service
+        node module_c_results.js &
+        cd ..
+        # Ждём поднятия серверов
+        sleep 10
+        # Проверяем каждый модуль
+        curl --fail http://localhost:5001/tests/active
+        curl --fail http://localhost:5002/docs
+        curl --fail http://localhost:3000/results/1
+        echo "CI успешно завершён"
       shell: bash
