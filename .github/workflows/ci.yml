@@ -1,0 +1,49 @@
+name: CI для системы тестирования знаний
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout код
+      uses: actions/checkout@v4
+
+    - name: Установить Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Установить зависимости
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Линтинг (flake8)
+      run: |
+        flake8 module_a_questions.py module_b_checking.py --max-line-length=120 --ignore=E501,W503
+
+    - name: Запуск модульных тестов
+      run: python test_modules.py
+
+    - name: Запуск всех трёх модулей и проверка их работы (интеграционный тест)
+      run: |
+        # Запускаем модуль А в фоне
+        python module_a_questions.py &
+        # Запускаем модуль Б в фоне
+        python module_b_checking.py &
+        # Ждём 5 секунд, чтобы серверы поднялись
+        sleep 5
+        # Проверяем, что модуль А отвечает
+        curl --fail http://localhost:5001/tests/active || exit 1
+        # Проверяем, что модуль Б отвечает
+        curl --fail http://localhost:5002/docs || exit 1
+        # Останавливаем процессы (для чистоты)
+        pkill -f "python module_a_questions.py"
+        pkill -f "uvicorn"
+      shell: bash
