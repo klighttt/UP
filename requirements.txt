@@ -1,7 +1,12 @@
+python-json-logger
+tenacity
+circuitbreaker
+pytest
+pytest-asyncio
+requests-mock
+playwright
 flask
 flask-cors
 fastapi
 uvicorn
-pytest
-flake8
 requests
