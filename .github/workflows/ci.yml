@@ -22,8 +22,7 @@ jobs:
     - name: Установить зависимости Python
       run: |
         python -m pip install --upgrade pip
-        pip install flask flask-cors fastapi uvicorn pytest pytest-asyncio requests-mock playwright
-        playwright install chromium
+        pip install -r requirements.txt
 
     - name: Установить Node.js
       uses: actions/setup-node@v4
@@ -51,11 +50,11 @@ jobs:
     - name: Запуск интеграционных тестов
       run: pytest tests/integration -v
 
-    - name: Запуск E2E тестов (требует работающие модули)
+    - name: Запуск E2E тестов
       run: pytest tests/e2e -v
-      continue-on-error: true  # чтобы не фейлить пайплайн если браузер не поднялся
+      continue-on-error: true
 
-    - name: Остановить модули (cleanup)
+    - name: Остановить модули
       if: always()
       run: |
         pkill -f "python module_a_questions.py" || true
