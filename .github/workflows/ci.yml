@@ -22,10 +22,8 @@ jobs:
     - name: Установить зависимости Python
       run: |
         python -m pip install --upgrade pip
-        pip install flask flask-cors fastapi uvicorn pytest
-
-    - name: Запуск модульных тестов
-      run: python test_modules.py || echo "Нет тестов, пропускаем"
+        pip install flask flask-cors fastapi uvicorn pytest pytest-asyncio requests-mock playwright
+        playwright install chromium
 
     - name: Установить Node.js
       uses: actions/setup-node@v4
@@ -38,7 +36,7 @@ jobs:
         npm install
         cd ..
 
-    - name: Запуск всех трёх модулей и проверка их работы
+    - name: Запустить модули (фон)
       run: |
         python module_a_questions.py &
         python module_b_checking.py &
@@ -46,8 +44,20 @@ jobs:
         node module_c_results.js &
         cd ..
         sleep 10
-        curl --fail http://localhost:5001/tests/active || echo "Модуль А не отвечает"
-        curl --fail http://localhost:5002/docs || echo "Модуль Б не отвечает"
-        curl --fail http://localhost:3000/results/1 || echo "Модуль В не отвечает"
-        echo "CI проверка завершена"
-      shell: bash
+
+    - name: Запуск unit-тестов
+      run: pytest tests/unit -v
+
+    - name: Запуск интеграционных тестов
+      run: pytest tests/integration -v
+
+    - name: Запуск E2E тестов (требует работающие модули)
+      run: pytest tests/e2e -v
+      continue-on-error: true  # чтобы не фейлить пайплайн если браузер не поднялся
+
+    - name: Остановить модули (cleanup)
+      if: always()
+      run: |
+        pkill -f "python module_a_questions.py" || true
+        pkill -f "uvicorn" || true
+        pkill -f "node module_c_results.js" || true

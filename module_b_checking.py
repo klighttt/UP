@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List
 from datetime import datetime
 
 app = FastAPI()
@@ -21,6 +21,7 @@ correct_answers_db = {
     5: "80"
 }
 
+
 class AnswerItem(BaseModel):
     questionId: int
     selectedOption: str
@@ -33,7 +34,39 @@ class SubmitRequest(BaseModel):
 
 @app.post("/tests/{test_id}/submit")
 async def submit_answers(test_id: int, request: SubmitRequest):
-    # ... код ...
+    total_questions = len(request.answers)
+    correct_count = 0
+    details = {}
+    incorrect_answers = {}
+
+    for answer in request.answers:
+        question_id = answer.questionId
+        user_answer = answer.selectedOption
+        correct_answer = correct_answers_db.get(question_id)
+
+        is_correct = (user_answer == correct_answer)
+        if is_correct:
+            correct_count += 1
+        else:
+            incorrect_answers[question_id] = {
+                "user_answer": user_answer,
+                "correct_answer": correct_answer
+            }
+        details[question_id] = is_correct
+
+    score = int((correct_count / total_questions) * 100) if total_questions > 0 else 0
+
+    return {
+        "testId": test_id,
+        "userId": request.userId,
+        "score": score,
+        "maxScore": 100,
+        "percentage": float(score),
+        "passed": score >= 60,
+        "completedAt": datetime.now().isoformat(),
+        "details": details,
+        "incorrectAnswers": incorrect_answers
+    }
 
 
 if __name__ == "__main__":

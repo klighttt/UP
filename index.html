@@ -4,138 +4,99 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Система тестирования знаний</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        h1 {
-            color: #1a1a2e;
-            text-align: center;
-        }
-        .status {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .status span {
-            display: inline-block;
-            padding: 5px 12px;
-            margin: 0 5px;
-            border-radius: 20px;
-            font-size: 12px;
-        }
-        .status .online { background: #4caf50; color: white; }
-        .status .offline { background: #f44336; color: white; }
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .card h3 { margin-top: 0; color: #1a1a2e; }
-        .question {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        .question-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        .option {
-            margin: 10px 0;
+        .option-item {
             cursor: pointer;
-            padding: 8px 12px;
-            border-radius: 8px;
-            transition: background 0.2s;
+            transition: all 0.2s ease;
+            border: 1px solid #dee2e6;
         }
-        .option:hover { background: #e9ecef; }
-        .option.selected { background: #2196f3; color: white; }
-        .option.correct-highlight {
-            background: #4caf50;
-            color: white;
+        .option-item:hover {
+            background-color: #e9ecef;
+            transform: scale(1.02);
         }
-        .option.wrong-highlight {
-            background: #f44336;
-            color: white;
+        .option-selected {
+            background-color: #0d6efd !important;
+            color: white !important;
+            border-color: #0d6efd;
         }
-        button {
-            background: #2196f3;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
+        /* Зелёный — правильный ответ */
+        .option-correct {
+            background-color: #28a745 !important;
+            color: white !important;
+            border-color: #28a745;
+            box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+            animation: pulse-green 0.8s ease;
         }
-        button:hover { background: #1976d2; }
-        .result { font-size: 18px; font-weight: bold; }
-        .passed { color: #4caf50; }
-        .failed { color: #f44336; }
-        .analytics { display: flex; gap: 20px; flex-wrap: wrap; }
-        .analytic-card {
-            background: #e3f2fd;
-            padding: 15px;
-            border-radius: 8px;
-            flex: 1;
-            text-align: center;
+        /* Красный — выбранный пользователем неправильный ответ */
+        .option-wrong {
+            background-color: #dc3545 !important;
+            color: white !important;
+            border-color: #dc3545;
+            box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+            animation: pulse-red 0.8s ease;
         }
-        details {
-            margin-top: 15px;
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
         }
-        summary {
-            cursor: pointer;
-            font-weight: bold;
-            color: #2196f3;
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
         }
-        pre {
-            background: #1a1a2e;
-            color: #00ff00;
-            padding: 15px;
-            border-radius: 8px;
-            overflow-x: auto;
-        }
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1100; }
+        .btn-reset { background-color: #6c757d; color: white; }
+        .btn-reset:hover { background-color: #5a6268; }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h1>Система тестирования знаний</h1>
-        
-        <div class="status" id="status">
-            <span id="moduleA_status" class="offline">Модуль А (5001): проверка...</span>
-            <span id="moduleB_status" class="offline">Модуль Б (5002): проверка...</span>
-            <span id="moduleC_status" class="offline">Модуль В (3000): проверка...</span>
+<body class="bg-light">
+    <div class="container py-4">
+        <div class="text-center mb-4">
+            <h1 class="display-5 fw-bold text-primary">📚 Система тестирования знаний</h1>
+            <p class="lead">Проверь свои знания по программированию</p>
         </div>
 
-        <div class="card" id="testInfo">
-            <h3>Загрузка теста...</h3>
+        <div class="row justify-content-center mb-4 g-2">
+            <div class="col-auto"><span id="moduleA_status" class="badge bg-secondary px-3 py-2">Модуль А (5001): проверка...</span></div>
+            <div class="col-auto"><span id="moduleB_status" class="badge bg-secondary px-3 py-2">Модуль Б (5002): проверка...</span></div>
+            <div class="col-auto"><span id="moduleC_status" class="badge bg-secondary px-3 py-2">Модуль В (3000): проверка...</span></div>
         </div>
 
-        <div class="card" id="questionsPanel" style="display:none;">
-            <h3>Вопросы теста</h3>
-            <div id="questionsContainer"></div>
-            <button onclick="submitAnswers()">Отправить ответы</button>
+        <div class="card shadow-sm mb-4" id="testInfoCard">
+            <div class="card-body">
+                <h3 class="card-title" id="testTitle">Загрузка теста...</h3>
+                <p class="card-text" id="testDesc"></p>
+                <div class="d-flex gap-3 text-muted small">
+                    <span><i class="bi bi-clock"></i> <span id="testTime"></span> мин</span>
+                    <span><i class="bi bi-star"></i> Макс. балл: <span id="testMaxScore"></span></span>
+                </div>
+            </div>
         </div>
 
-        <div class="card" id="resultPanel" style="display:none;">
-            <h3>Результат тестирования</h3>
-            <div id="resultContainer"></div>
+        <div class="card shadow-sm" id="questionsCard" style="display: none;">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-question-circle"></i> Вопросы теста</h4>
+                <button class="btn btn-sm btn-reset" id="resetTestBtn" style="display: none;" onclick="resetTest()">
+                    <i class="bi bi-arrow-repeat"></i> Пройти заново
+                </button>
+            </div>
+            <div class="card-body" id="questionsContainer"></div>
+            <div class="card-footer bg-white text-end" id="submitFooter">
+                <button class="btn btn-primary btn-lg" onclick="submitAnswers()" id="submitBtn">
+                    <i class="bi bi-send"></i> Отправить ответы
+                </button>
+            </div>
         </div>
 
-        <div class="card" id="analyticsPanel" style="display:none;">
-            <h3>Аналитика по тесту</h3>
-            <div id="analyticsContainer"></div>
+        <div class="card shadow-sm mt-4" id="analyticsCard" style="display: none;">
+            <div class="card-header bg-white"><h4 class="mb-0"><i class="bi bi-graph-up"></i> Аналитика по тесту</h4></div>
+            <div class="card-body" id="analyticsContainer"></div>
         </div>
     </div>
+    <div class="toast-container"></div>
 
     <script>
         const MODULE_A = 'http://localhost:5001';
@@ -145,216 +106,202 @@
         let currentTest = null;
         let currentQuestions = [];
         let userAnswers = {};
-        let showResultsMode = false;
-        let lastResultData = null;
+        let isSubmitted = false;
+
+        function showToast(message, type = 'success') {
+            const toastContainer = document.querySelector('.toast-container');
+            const toastEl = document.createElement('div');
+            toastEl.className = 'toast align-items-center text-white bg-' + (type === 'success' ? 'success' : 'danger') + ' border-0';
+            toastEl.setAttribute('role', 'alert');
+            toastEl.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            toastContainer.appendChild(toastEl);
+            const bsToast = new bootstrap.Toast(toastEl, { delay: 3000 });
+            bsToast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        }
 
         async function checkStatus() {
             try {
                 const res = await fetch(`${MODULE_A}/tests/active`);
-                if (res.ok) document.getElementById('moduleA_status').innerHTML = 'Модуль А (5001): онлайн';
+                if (res.ok) updateStatusBadge('moduleA_status', true, 'Модуль А (5001)');
                 else throw new Error();
-            } catch(e) {
-                document.getElementById('moduleA_status').innerHTML = 'Модуль А (5001): офлайн';
-            }
-
+            } catch { updateStatusBadge('moduleA_status', false, 'Модуль А (5001)'); }
             try {
                 const res = await fetch(`${MODULE_B}/docs`);
-                if (res.ok) document.getElementById('moduleB_status').innerHTML = 'Модуль Б (5002): онлайн';
+                if (res.ok) updateStatusBadge('moduleB_status', true, 'Модуль Б (5002)');
                 else throw new Error();
-            } catch(e) {
-                document.getElementById('moduleB_status').innerHTML = 'Модуль Б (5002): офлайн';
-            }
-
+            } catch { updateStatusBadge('moduleB_status', false, 'Модуль Б (5002)'); }
             try {
                 const res = await fetch(`${MODULE_C}/results/1`);
-                if (res.ok) document.getElementById('moduleC_status').innerHTML = 'Модуль В (3000): онлайн';
+                if (res.ok) updateStatusBadge('moduleC_status', true, 'Модуль В (3000)');
                 else throw new Error();
-            } catch(e) {
-                document.getElementById('moduleC_status').innerHTML = 'Модуль В (3000): офлайн';
-            }
+            } catch { updateStatusBadge('moduleC_status', false, 'Модуль В (3000)'); }
         }
 
-        async function loadTest() {
-            showResultsMode = false;
-            userAnswers = {};
-            
-            try {
-                const testRes = await fetch(`${MODULE_A}/tests/active`);
-                currentTest = await testRes.json();
-                
-                document.getElementById('testInfo').innerHTML = `
-                    <h3>${currentTest.title}</h3>
-                    <p>${currentTest.description}</p>
-                    <p>Время: ${currentTest.timeLimitMinutes} мин | Макс. балл: ${currentTest.maxScore}</p>
-                `;
-
-                const questionsRes = await fetch(`${MODULE_A}/tests/${currentTest.id}/questions`);
-                currentQuestions = await questionsRes.json();
-                
-                renderQuestions();
-                document.getElementById('questionsPanel').style.display = 'block';
-                document.getElementById('resultPanel').style.display = 'none';
-                
-                loadAnalytics();
-            } catch(e) {
-                document.getElementById('testInfo').innerHTML = `<h3>Ошибка загрузки: ${e.message}</h3>`;
+        function updateStatusBadge(elementId, isOnline, label) {
+            const badge = document.getElementById(elementId);
+            if (isOnline) {
+                badge.className = 'badge bg-success px-3 py-2';
+                badge.innerHTML = `${label}: ✅ онлайн`;
+            } else {
+                badge.className = 'badge bg-danger px-3 py-2';
+                badge.innerHTML = `${label}: ❌ офлайн`;
+                showToast(`${label} недоступен`, 'danger');
             }
-        }
-
-        function getCorrectAnswerForQuestion(questionId) {
-            const correctMap = {
-                1: "Объектно-ориентированное программирование",
-                2: "#",
-                3: "tuple",
-                4: "print()",
-                5: "Сравнение на равенство",
-                6: "while",
-                7: "Интерфейс программирования приложений",
-                8: "GET",
-                9: "Structured Query Language",
-                10: "80"
-            };
-            return correctMap[questionId];
         }
 
         function renderQuestions() {
             const container = document.getElementById('questionsContainer');
             container.innerHTML = '';
-            
-            currentQuestions.forEach((q, index) => {
-                const questionDiv = document.createElement('div');
-                questionDiv.className = 'question';
-                questionDiv.id = `question-${q.id}`;
-                questionDiv.innerHTML = `<div class="question-title">${index + 1}. ${q.text}</div>`;
-                
-                const correctAnswerText = getCorrectAnswerForQuestion(q.id);
-                
+            if (!currentQuestions.length) return;
+
+            currentQuestions.forEach((q, idx) => {
+                const card = document.createElement('div');
+                card.className = 'card mb-3';
+                card.innerHTML = `<div class="card-header bg-white fw-bold">${idx+1}. ${q.text}</div><div class="card-body" id="q-${q.id}"></div>`;
+                const optionsDiv = card.querySelector('.card-body');
+                const correctAnswer = q.correctAnswer;  // теперь есть
+
                 q.options.forEach(opt => {
                     const optDiv = document.createElement('div');
-                    optDiv.className = 'option';
-                    optDiv.textContent = opt;
+                    optDiv.className = 'p-2 mb-2 border rounded option-item';
+                    optDiv.innerText = opt;
                     optDiv.setAttribute('data-value', opt);
-                    
-                    if (!showResultsMode) {
-                        optDiv.onclick = () => {
-                            questionDiv.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
-                            optDiv.classList.add('selected');
+
+                    if (!isSubmitted) {
+                        optDiv.addEventListener('click', () => {
+                            if (isSubmitted) return;
+                            document.querySelectorAll(`#q-${q.id} .option-item`).forEach(el => el.classList.remove('option-selected'));
+                            optDiv.classList.add('option-selected');
                             userAnswers[q.id] = opt;
-                        };
+                        });
+                        if (userAnswers[q.id] === opt) optDiv.classList.add('option-selected');
                     } else {
-                        if (opt === correctAnswerText) {
-                            optDiv.classList.add('correct-highlight');
+                        // Режим результатов: правильный ответ всегда зелёный
+                        if (opt === correctAnswer) {
+                            optDiv.classList.add('option-correct');
                         }
-                        if (userAnswers[q.id] === opt && userAnswers[q.id] !== correctAnswerText) {
-                            optDiv.classList.add('wrong-highlight');
+                        // Если пользователь выбрал этот вариант И он неправильный – красный
+                        if (userAnswers[q.id] === opt && opt !== correctAnswer) {
+                            optDiv.classList.add('option-wrong');
                         }
+                        optDiv.style.cursor = 'default';
+                        optDiv.onclick = null;
                     }
-                    
-                    questionDiv.appendChild(optDiv);
+                    optionsDiv.appendChild(optDiv);
                 });
-                container.appendChild(questionDiv);
+                container.appendChild(card);
             });
+        }
+
+        async function loadTest() {
+            try {
+                const testRes = await fetch(`${MODULE_A}/tests/active`);
+                currentTest = await testRes.json();
+                document.getElementById('testTitle').innerText = currentTest.title;
+                document.getElementById('testDesc').innerText = currentTest.description || '';
+                document.getElementById('testTime').innerText = currentTest.timeLimitMinutes;
+                document.getElementById('testMaxScore').innerText = currentTest.maxScore;
+
+                const qRes = await fetch(`${MODULE_A}/tests/${currentTest.id}/questions`);
+                currentQuestions = await qRes.json();
+                
+                isSubmitted = false;
+                userAnswers = {};
+                document.getElementById('resetTestBtn').style.display = 'none';
+                document.getElementById('submitFooter').style.display = 'block';
+                document.getElementById('analyticsCard').style.display = 'none';
+                
+                renderQuestions();
+                document.getElementById('questionsCard').style.display = 'block';
+                loadAnalytics();
+                showToast('Тест загружен', 'success');
+            } catch (e) {
+                document.getElementById('testTitle').innerText = 'Ошибка загрузки';
+                showToast('Ошибка: ' + e.message, 'danger');
+            }
         }
 
         async function submitAnswers() {
             if (Object.keys(userAnswers).length !== currentQuestions.length) {
-                alert(`Ответьте на все вопросы! (Отвечено: ${Object.keys(userAnswers).length} из ${currentQuestions.length})`);
+                showToast(`Ответьте на все вопросы (${Object.keys(userAnswers).length}/${currentQuestions.length})`, 'danger');
                 return;
             }
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Отправка...';
 
-            const answersList = Object.entries(userAnswers).map(([qId, answer]) => ({
-                questionId: parseInt(qId),
-                selectedOption: answer
-            }));
-
-            const payload = {
-                userId: 1,
-                answers: answersList
-            };
-
+            const answersList = Object.entries(userAnswers).map(([qId, ans]) => ({ questionId: parseInt(qId), selectedOption: ans }));
             try {
-                const checkRes = await fetch(`${MODULE_B}/tests/${currentTest.id}/submit`, {
+                const respB = await fetch(`${MODULE_B}/tests/${currentTest.id}/submit`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({ userId: 1, answers: answersList })
                 });
-                const result = await checkRes.json();
+                const result = await respB.json();
 
                 await fetch(`${MODULE_C}/results/save`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(result)
+                    body: JSON.stringify({
+                        testId: currentTest.id, userId: 1, score: result.score,
+                        maxScore: result.maxScore, percentage: result.percentage,
+                        passed: result.passed, completedAt: result.completedAt, details: result.details
+                    })
                 });
 
-                lastResultData = result;
-                showResultsMode = true;
-                
-                renderQuestions();
-                
-                displayResult(result);
-                
+                isSubmitted = true;
+                renderQuestions();   // перерисовка с правильной подсветкой
+                document.getElementById('resetTestBtn').style.display = 'inline-block';
+                document.getElementById('submitFooter').style.display = 'none';
                 loadAnalytics();
-                
-            } catch(e) {
-                alert(`Ошибка: ${e.message}`);
+                showToast(`Тест завершён! Баллы: ${result.score}`, result.passed ? 'success' : 'danger');
+            } catch (e) {
+                showToast('Ошибка: ' + e.message, 'danger');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-send"></i> Отправить ответы';
             }
-        }
-
-        function displayResult(result) {
-            document.getElementById('resultPanel').style.display = 'block';
-            
-            document.getElementById('resultContainer').innerHTML = `
-                <div class="result ${result.passed ? 'passed' : 'failed'}">
-                    ${result.passed ? 'ТЕСТ ПРОЙДЕН' : 'ТЕСТ НЕ ПРОЙДЕН'}
-                </div>
-                <p>Баллы: ${result.score} / ${result.maxScore}</p>
-                <p>Процент: ${result.percentage}%</p>
-                <p>Дата: ${new Date(result.completedAt).toLocaleString()}</p>
-                <button onclick="resetTest()">Пройти тест заново</button>
-            `;
         }
 
         function resetTest() {
-            showResultsMode = false;
+            isSubmitted = false;
             userAnswers = {};
             renderQuestions();
-            document.getElementById('resultPanel').style.display = 'none';
+            document.getElementById('resetTestBtn').style.display = 'none';
+            document.getElementById('submitFooter').style.display = 'block';
+            document.getElementById('analyticsCard').style.display = 'none';
+            showToast('Тест сброшен. Можно пройти заново', 'success');
         }
 
         async function loadAnalytics() {
+            if (!currentTest) return;
             try {
-                const analyticsRes = await fetch(`${MODULE_C}/analytics/test/${currentTest?.id || 1}`);
-                const analytics = await analyticsRes.json();
-                
-                document.getElementById('analyticsPanel').style.display = 'block';
+                const resp = await fetch(`${MODULE_C}/analytics/test/${currentTest.id}`);
+                const data = await resp.json();
                 document.getElementById('analyticsContainer').innerHTML = `
-                    <div class="analytics">
-                        <div class="analytic-card">
-                            <h4>Средний балл</h4>
-                            <div style="font-size: 28px;">${analytics.averageScore}</div>
-                        </div>
-                        <div class="analytic-card">
-                            <h4>Проходной балл</h4>
-                            <div style="font-size: 28px;">${analytics.passRate}%</div>
-                        </div>
-                        <div class="analytic-card">
-                            <h4>Попыток</h4>
-                            <div style="font-size: 28px;">${analytics.attemptsCount}</div>
-                        </div>
+                    <div class="row text-center">
+                        <div class="col-md-4"><div class="p-3 border rounded bg-light"><h5>Средний балл</h5><h2>${data.averageScore}</h2></div></div>
+                        <div class="col-md-4"><div class="p-3 border rounded bg-light"><h5>Проходной %</h5><h2>${data.passRate}%</h2></div></div>
+                        <div class="col-md-4"><div class="p-3 border rounded bg-light"><h5>Попыток</h5><h2>${data.attemptsCount}</h2></div></div>
                     </div>
-                    <details>
-                        <summary>Распределение баллов</summary>
-                        <pre>${JSON.stringify(analytics.scoreDistribution, null, 2)}</pre>
-                    </details>
+                    <details class="mt-3"><summary>Распределение баллов</summary><pre class="bg-dark text-white p-2 rounded">${JSON.stringify(data.scoreDistribution, null, 2)}</pre></details>
                 `;
-            } catch(e) {
-                console.error('Аналитика не доступна:', e);
-            }
+                document.getElementById('analyticsCard').style.display = 'block';
+            } catch(e) { console.warn(e); }
         }
 
-        checkStatus();
-        setTimeout(() => loadTest(), 1000);
-        setInterval(checkStatus, 30000);
+        window.addEventListener('DOMContentLoaded', () => {
+            checkStatus();
+            setTimeout(loadTest, 500);
+            setInterval(checkStatus, 20000);
+        });
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

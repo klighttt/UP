@@ -1,6 +1,5 @@
 """
-Интеграционный сервис (оркестратор)
-Отвечает за координацию вызовов между модулями А, Б, В
+Интеграционный сервис (оркестратор) с логированием, Retry и Circuit Breaker.
 """
 
 import requests
@@ -9,16 +8,11 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 
-# Настройка логирования (Serilog-подобный подход)
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[
-        logging.FileHandler('integration.log'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+from logger_config import setup_logging
+from resilience import resilient_call
+
+# Инициализация логирования (JSON + консоль)
+logger = setup_logging()
 
 
 class IntegrationService:
@@ -28,25 +22,27 @@ class IntegrationService:
         self.module_a_url = "http://localhost:5001"
         self.module_b_url = "http://localhost:5002"
         self.module_c_url = "http://localhost:3000"
-        logger.info("Интеграционный сервис инициализирован")
+        logger.info("IntegrationService инициализирован")
 
+    @resilient_call
     def get_active_test(self) -> Optional[Dict[str, Any]]:
         """Вызов модуля А: получение активного теста"""
+        logger.info("Вызов модуля А: GET /tests/active")
         try:
-            logger.info("Вызов модуля А: GET /tests/active")
             response = requests.get(f"{self.module_a_url}/tests/active", timeout=5)
             response.raise_for_status()
             test_data = response.json()
             logger.info(f"Модуль А ответил: тест ID={test_data.get('id')}")
             return test_data
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             logger.error(f"Ошибка вызова модуля А: {e}")
-            return None
+            raise
 
+    @resilient_call
     def get_questions(self, test_id: int) -> Optional[List[Dict[str, Any]]]:
         """Вызов модуля А: получение вопросов теста"""
+        logger.info(f"Вызов модуля А: GET /tests/{test_id}/questions")
         try:
-            logger.info(f"Вызов модуля А: GET /tests/{test_id}/questions")
             response = requests.get(
                 f"{self.module_a_url}/tests/{test_id}/questions",
                 timeout=5
@@ -55,19 +51,20 @@ class IntegrationService:
             questions = response.json()
             logger.info(f"Модуль А вернул {len(questions)} вопросов")
             return questions
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             logger.error(f"Ошибка вызова модуля А (вопросы): {e}")
-            return None
+            raise
 
+    @resilient_call
     def check_answers(self, test_id: int, user_id: int, answers: List[Dict]) -> Optional[Dict[str, Any]]:
         """Вызов модуля Б: проверка ответов"""
+        payload = {
+            "userId": user_id,
+            "answers": answers
+        }
+        logger.info(f"Вызов модуля Б: POST /tests/{test_id}/submit")
+        logger.info(f"Проверка ответов для пользователя {user_id}")
         try:
-            payload = {
-                "userId": user_id,
-                "answers": answers
-            }
-            logger.info(f"Вызов модуля Б: POST /tests/{test_id}/submit")
-            logger.info(f"Проверка ответов для пользователя {user_id}")
             response = requests.post(
                 f"{self.module_b_url}/tests/{test_id}/submit",
                 json=payload,
@@ -77,14 +74,15 @@ class IntegrationService:
             result = response.json()
             logger.info(f"Модуль Б ответил: баллы={result.get('score')}, пройден={result.get('passed')}")
             return result
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             logger.error(f"Ошибка вызова модуля Б: {e}")
-            return None
+            raise
 
+    @resilient_call
     def save_result(self, result_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Вызов модуля В: сохранение результата"""
+        logger.info("Вызов модуля В: POST /results/save")
         try:
-            logger.info("Вызов модуля В: POST /results/save")
             response = requests.post(
                 f"{self.module_c_url}/results/save",
                 json=result_data,
@@ -94,14 +92,15 @@ class IntegrationService:
             saved = response.json()
             logger.info(f"Модуль В сохранил результат: {saved.get('resultId')}")
             return saved
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             logger.error(f"Ошибка вызова модуля В: {e}")
-            return None
+            raise
 
+    @resilient_call
     def get_user_results(self, user_id: int) -> Optional[Dict[str, Any]]:
         """Вызов модуля В: получение истории результатов"""
+        logger.info(f"Вызов модуля В: GET /results/{user_id}")
         try:
-            logger.info(f"Вызов модуля В: GET /results/{user_id}")
             response = requests.get(
                 f"{self.module_c_url}/results/{user_id}",
                 timeout=5
@@ -110,9 +109,9 @@ class IntegrationService:
             results = response.json()
             logger.info(f"Модуль В вернул {results.get('totalAttempts')} попыток")
             return results
-        except requests.exceptions.RequestException as e:
+        except Exception as e:
             logger.error(f"Ошибка вызова модуля В (история): {e}")
-            return None
+            raise
 
     def complete_test_flow(self, user_id: int, answers: List[Dict]) -> Dict[str, Any]:
         """
@@ -126,6 +125,7 @@ class IntegrationService:
         # Шаг 1: получить тест
         test = self.get_active_test()
         if not test:
+            logger.error("Не удалось получить тест")
             return {"error": "Не удалось получить тест", "status": "failed"}
 
         test_id = test.get("id")
@@ -133,9 +133,10 @@ class IntegrationService:
         # Шаг 2: проверить ответы
         check_result = self.check_answers(test_id, user_id, answers)
         if not check_result:
+            logger.error("Не удалось проверить ответы")
             return {"error": "Не удалось проверить ответы", "status": "failed"}
 
-        # Шаг 3: сохранить результат (модуль В ожидает полные данные)
+        # Шаг 3: сохранить результат
         save_payload = {
             "testId": test_id,
             "userId": user_id,
@@ -158,17 +159,13 @@ class IntegrationService:
         }
 
 
-# Маппер данных (аналог AutoMapper для C#)
+# Маппер данных (аналог AutoMapper)
 class AnswerMapper:
     """Преобразование данных между форматами разных модулей"""
 
     @staticmethod
     def map_user_answers(answers_dict: Dict[int, str]) -> List[Dict]:
-        """
-        Преобразование словаря ответов в формат для модуля Б
-        Вход: {1: "print", 2: "tuple"}
-        Выход: [{"questionId": 1, "selectedOption": "print"}, ...]
-        """
+        """Преобразование словаря ответов в формат для модуля Б"""
         result = []
         for q_id, answer in answers_dict.items():
             result.append({
@@ -179,9 +176,7 @@ class AnswerMapper:
 
     @staticmethod
     def map_to_save_format(result_data: Dict) -> Dict:
-        """
-        Преобразование результата от модуля Б в формат для модуля В
-        """
+        """Преобразование результата от модуля Б в формат для модуля В"""
         return {
             "testId": result_data.get("testId"),
             "userId": result_data.get("userId"),
@@ -196,21 +191,15 @@ class AnswerMapper:
 
 # Пример использования
 if __name__ == "__main__":
-    # Создаём экземпляр сервиса
     orchestrator = IntegrationService()
 
-    # Пример: завершить тест с ответами
+    # Пример правильных ответов
     sample_answers = [
         {"questionId": 1, "selectedOption": "Объектно-ориентированное программирование"},
         {"questionId": 2, "selectedOption": "#"},
         {"questionId": 3, "selectedOption": "tuple"},
         {"questionId": 4, "selectedOption": "print()"},
-        {"questionId": 5, "selectedOption": "Сравнение на равенство"},
-        {"questionId": 6, "selectedOption": "while"},
-        {"questionId": 7, "selectedOption": "Интерфейс программирования приложений"},
-        {"questionId": 8, "selectedOption": "GET"},
-        {"questionId": 9, "selectedOption": "Structured Query Language"},
-        {"questionId": 10, "selectedOption": "80"}
+        {"questionId": 5, "selectedOption": "80"}
     ]
 
     result = orchestrator.complete_test_flow(user_id=1, answers=sample_answers)
