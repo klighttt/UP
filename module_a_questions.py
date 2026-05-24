@@ -1,8 +1,12 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
+from time import time
 
 app = Flask(__name__)
 CORS(app)
+
+questions_cache = {}
+CACHE_TTL = 300
 
 tests = {
     1: {
@@ -30,10 +34,26 @@ def get_active_test():
 
 @app.route('/tests/<int:test_id>/questions', methods=['GET'])
 def get_questions(test_id):
+    if test_id in questions_cache:
+        timestamp, cached_data = questions_cache[test_id]
+        if time() - timestamp < CACHE_TTL:
+            return jsonify(cached_data)
+
     if test_id not in questions:
         return jsonify({"error": "Тест не найден"}), 404
-    # Возвращаем вопросы вместе с правильными ответами (для подсветки после проверки)
-    return jsonify(questions[test_id])
+
+    safe_questions = []
+    for q in questions[test_id]:
+        safe_questions.append({
+            "id": q["id"],
+            "text": q["text"],
+            "options": q["options"],
+            "type": q["type"],
+            "correctAnswer": q["correctAnswer"]
+        })
+
+    questions_cache[test_id] = (time(), safe_questions)
+    return jsonify(safe_questions)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)

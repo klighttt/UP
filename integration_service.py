@@ -1,7 +1,4 @@
-"""
-Интеграционный сервис (оркестратор) с логированием, Retry и Circuit Breaker.
-"""
-
+import concurrent.futures
 import requests
 import json
 import logging
@@ -15,6 +12,14 @@ logger = setup_logging()
 
 
 class IntegrationService:
+     def get_user_and_analytics(self, user_id, test_id):
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            future_results = executor.submit(self.get_user_results, user_id)
+            future_analytics = executor.submit(self.get_analytics, test_id)
+            results = future_results.result()
+            analytics = future_analytics.result()
+        return results, analytics
+        
     def __init__(self):
         self.module_a_url = "http://localhost:5001"
         self.module_b_url = "http://localhost:5002"
